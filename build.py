@@ -1,253 +1,259 @@
-# Builds the four pages from one header and footer. Edit the values below,
-# run `python build.py`. It writes the pages into site/; site/ is what is published.
-WA_API_NUMBER   = "27795255987"          # the WhatsApp number clients message (no + or spaces)
-WA_API_NUMBER_DISPLAY  = "+27 79 525 5987"      # the same number as people read it
-WA_BUSINESS_NUMBER = "27645260397"     # the business number: suppliers asking to join (a person replies)
-WA_BUSINESS_NUMBER_DISPLAY = "+27 64 526 0397"  # the same, as people read it
-EMAIL       = "info@52carparts.co.za"
-CITY        = "Pretoria"               # the city of the controlled start
+# Builds the pages from one header and footer. Edit the values below, then run
+# `python build.py`. It writes the pages into site/; site/ is what is published
+# (CI does not run this script, so commit the generated files).
+WA_CLIENT_NUMBER          = "27795255987"      # the number clients message (no + or spaces)
+WA_CLIENT_NUMBER_DISPLAY  = "+27 79 525 5987"  # the same number as people read it
+WA_SUPPLIER_NUMBER         = "27645260397"     # suppliers asking to join (a person replies)
+WA_SUPPLIER_NUMBER_DISPLAY = "+27 64 526 0397"
 REG_NUMBER  = "2026/271349/07"
 LEGAL_NAME  = "Vyf Twee (Pty) Ltd"   # exactly as on the CIPC certificate
-OFFICER     = "Hennie Botha"
 ADDRESS     = "565 Coert Steynberg Street, Constantia Park, Pretoria, 0010"
-UPDATED     = "28 October 2026"
 
-WA_API_LINK = f"https://wa.me/{WA_API_NUMBER}"
-WA_BUSINESS_LINK = f"https://wa.me/{WA_BUSINESS_NUMBER}"
+SITE    = "https://www.52carparts.co.za"
+VYFTWEE = "https://www.vyftwee.co.za"
 
-PAGES = [("index.html", "Clients"), ("suppliers.html", "Suppliers"), ("about.html", "About us"), ("privacy.html", "Privacy policy")]
+# Pre-filled WhatsApp messages. The client text goes to the bot; the workshop and
+# supplier texts go to the business number, where a person replies.
+CLIENT_TEXT   = "Hi, I'd like to get a quote."
+WORKSHOP_TEXT = "Hi, I'm from a workshop or panel beater and would like to talk about sourcing parts regularly."
+SUPPLIER_TEXT = "Hi, I'm a parts supplier in Gauteng and would like to join the 52 Car Parts network."
 
-def page(file, title, description, body):
-    nav = "".join(
-        f'<li><a href="{f}"{" aria-current=\"page\"" if f == file else ""}>{t}</a></li>' for f, t in PAGES)
+# TEMPORARY: the WhatsApp bot currently routes any message containing one of these
+# substrings (case-insensitive, even inside a word) down a different path, so the
+# client text must not contain any of them. Remove this check once the WhatsApp
+# platform routes clients by customer type instead of keywords.
+BOT_KEYWORDS = ["part", "parts", "bumper", "panel", "light", "mirror", "engine", "gearbox", "door",
+                "bonnet", "boot", "vin", "exhaust", "radiator", "strut", "shock", "alternator",
+                "headlight", "taillight", "grille", "fender", "mudguard", "starter", "battery",
+                "clutch", "brake", "caliper"]
+_hits = [k for k in BOT_KEYWORDS if k in CLIENT_TEXT.lower()]
+if _hits:
+    raise SystemExit(f"build failed: CLIENT_TEXT contains bot routing keyword(s) {_hits}: {CLIENT_TEXT!r}")
+
+from urllib.parse import quote
+def wa(number, text):
+    return f"https://wa.me/{number}?text={quote(text, safe='')}"
+
+# Meta's official WhatsApp glyph, copied unchanged from the brand folder. It is
+# referenced as a file, not inlined, so its colours and markup stay exactly as supplied.
+WA_GLYPH = '<img class="wa-icon" src="/images/whatsapp-glyph.svg" alt="" aria-hidden="true" width="20" height="20">'
+
+def wa_button(href, label, cls=""):
+    return f'<a class="btn btn-primary btn-wa{" " + cls if cls else ""}" href="{href}">{WA_GLYPH}<span>{label}</span></a>'
+
+WA_CLIENT   = wa(WA_CLIENT_NUMBER, CLIENT_TEXT)
+WA_WORKSHOP = wa(WA_SUPPLIER_NUMBER, WORKSHOP_TEXT)
+WA_SUPPLIER = wa(WA_SUPPLIER_NUMBER, SUPPLIER_TEXT)
+POLICIES = [("Terms", "terms"), ("Privacy", "privacy"), ("Refunds", "refunds"),
+            ("Cancellations", "cancellations"), ("Delivery", "delivery")]
+
+LOGO_LIGHT = "/images/52carparts-logo-light.svg"
+LOGO_DARK  = "/images/52carparts-logo-dark.svg"
+LOGO_WH    = 'width="167" height="134"'   # the logo's viewBox, for layout before load
+
+
+def header(current):
+    def link(href, text, key):
+        cur = ' aria-current="page"' if key == current else ""
+        return f'<li><a href="{href}"{cur}>{text}</a></li>'
+    return f"""<header class="site-header">
+  <div class="wrap">
+    <a class="logo" href="/"><picture><source media="(prefers-color-scheme: dark)" srcset="{LOGO_DARK}"><img src="{LOGO_LIGHT}" alt="52 Car Parts" {LOGO_WH}></picture></a>
+    <nav class="site-nav" aria-label="Main">
+      <ul>{link("/#how", "How it works", "how")}{link("/suppliers", "Suppliers", "suppliers")}{link("/#about", "About", "about")}</ul>
+    </nav>
+    {wa_button(WA_CLIENT, '<span class="long">Start on </span>WhatsApp', "header-cta")}
+  </div>
+</header>"""
+
+
+FOOTER = f"""<footer class="site-footer on-dark">
+  <div class="wrap">
+    <div class="footer-cols">
+      <div><img class="footer-logo" src="{LOGO_DARK}" alt="52 Car Parts" {LOGO_WH}></div>
+      <div>
+        <h2 class="footer-heading">52 Car Parts</h2>
+        <ul><li><a href="/#how">How it works</a></li><li><a href="/suppliers">Suppliers</a></li><li><a href="{WA_CLIENT}">WhatsApp {WA_CLIENT_NUMBER_DISPLAY}</a></li></ul>
+      </div>
+      <div>
+        <h2 class="footer-heading">Policies</h2>
+        <ul>{"".join(f'<li><a href="{VYFTWEE}/{p}">{t}</a></li>' for t, p in POLICIES)}</ul>
+      </div>
+    </div>
+    <div class="footer-legal">
+      <p>52 Car Parts is a brand of {LEGAL_NAME} · Registration number {REG_NUMBER} · {ADDRESS}</p>
+      <p>This site uses no cookies, analytics or tracking.</p>
+    </div>
+  </div>
+</footer>"""
+
+
+def page(path, title, description, body, current=None, noindex=False):
+    url = SITE + path
+    robots = '\n<meta name="robots" content="noindex">' if noindex else ""
+    canonical = "" if noindex else f'\n<link rel="canonical" href="{url}">'
     return f"""<!DOCTYPE html>
 <html lang="en-ZA">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{title}</title>
-<meta name="description" content="{description}">
-<link rel="stylesheet" href="styles.css">
+<meta name="description" content="{description}">{canonical}{robots}
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#17191D">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="52 Car Parts">
+<meta property="og:title" content="{title}">
+<meta property="og:description" content="{description}">
+<meta property="og:url" content="{url}">
+<meta property="og:image" content="{SITE}/android-chrome-512.png">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="preload" href="/fonts/saira-600-700.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-<header class="site-header">
-  <div class="wrap">
-    <a class="wordmark" href="index.html">52 Car Parts</a>
-    <nav class="site-nav" aria-label="Main"><ul>{nav}</ul></nav>
-  </div>
-</header>
+{header(current)}
 <main>
 {body}
 </main>
-<footer class="site-footer">
-  <div class="wrap">
-    <div>
-      <p><strong>52 Car Parts is a brand of Vyf Twee</strong></p>
-      <p>{LEGAL_NAME}, registration number {REG_NUMBER}</p>
-      <p>{ADDRESS}</p>
-    </div>
-    <div>
-      <p><strong>Contact</strong></p>
-      <p>WhatsApp: <a href="{WA_API_LINK}">{WA_API_NUMBER_DISPLAY}</a></p>
-      <p>Email: <a href="mailto:{EMAIL}">{EMAIL}</a></p>
-    </div>
-    <div>
-      <p><strong>Pages</strong></p>
-      <ul>{"".join(f'<li><a href="{f}">{t}</a></li>' for f, t in PAGES)}</ul>
-      <p><a href="https://vyftwee.co.za/">Vyf Twee</a></p>
-    </div>
-  </div>
-</footer>
+{FOOTER}
 </body>
 </html>
 """
 
-CLIENTS = f"""
-<section class="hero">
-  <div class="wrap">
-    <div>
-      <h1>Send us your licence disc. We’ll find the part.</h1>
-      <p class="lead">52 Car Parts sources car parts for private clients in {CITY}, entirely on WhatsApp. Suppliers quote, you choose, and we collect and deliver. You pay only once you’ve inspected the part.</p>
-      <div class="actions">
-        <a class="btn" href="{WA_API_LINK}">Request a part on WhatsApp</a>
-        <a href="#how">How it works</a>
-      </div>
-    </div>
-    <div class="disc" aria-hidden="true">
-      <div class="big">52</div>
-      <div class="name">Car Parts</div>
-      <dl><dt>VIN</dt><dd>AAVZZZ6RZEU123456</dd><dt>Eng. Nr.</dt><dd>CJZ 123456</dd><dt>Reg. Nr.</dt><dd>CA 123-456</dd></dl>
+
+def hero(kicker, h1_first, h1_accent, intro, actions, h1_class="", id_attr=""):
+    return f"""<section class="hero on-dark"{id_attr}>
+  <div class="wrap hero-grid">
+    <img class="hero-logo" src="{LOGO_DARK}" alt="" {LOGO_WH}>
+    <div class="hero-text">
+      <p class="kicker">{kicker}</p>
+      <h1 class="{h1_class}">{h1_first} <span class="accent">{h1_accent}</span></h1>
+      <p class="intro">{intro}</p>
+      {actions}
     </div>
   </div>
-</section>
+</section>"""
 
-<section class="band raised" id="how">
+
+def steps(items, cls):
+    return f'<ol class="steps {cls}">' + "".join(
+        f"\n      <li><h3>{t}</h3><p>{p}</p></li>" for t, p in items) + "\n    </ol>"
+
+
+def benefits(items):
+    return '<ul class="benefits">' + "".join(
+        f"\n      <li><h3>{t}</h3><p>{p}</p></li>" for t, p in items) + "\n    </ul>"
+
+
+HOME_INTRO = ("New, aftermarket, reconditioned and used parts from independent suppliers in Gauteng, "
+              "delivered anywhere in South Africa. Inspect the part when it arrives and pay only if you "
+              "accept it.")
+
+HOME = hero(
+    "Sourced in Gauteng · Delivered nationwide",
+    "You need the part.", "We’ll find it.",
+    HOME_INTRO,
+    f"""<div class="actions">{wa_button(WA_CLIENT, "Start on WhatsApp")}<a class="btn btn-secondary" href="#how">How it works</a></div>
+      <p class="hero-note">WhatsApp opens with a message ready. Tap Send and we’ll reply with the next steps.</p>""",
+    id_attr=' id="top"',
+) + f"""
+
+<section class="band" id="how">
   <div class="wrap">
     <h2>How it works</h2>
-    <ol class="steps">
-      <li><h3>Send a photo</h3><p>Message us and send a photo of your vehicle licence disc. We read the VIN, engine and registration numbers from it.</p></li>
-      <li><h3>Describe the part</h3><p>Tell us which part you need, its position, and the types you’d accept: new, aftermarket, reconditioned or used.</p></li>
-      <li><h3>Choose a quote</h3><p>We ask our suppliers and send you their offers. Every price already includes collection and delivery.</p></li>
-      <li><h3>We deliver</h3><p>Our courier collects the part from the supplier and brings it to you.</p></li>
-      <li><h3>Inspect, then pay</h3><p>Check the part. If it’s right, accept it and pay by EFT against your invoice. If it isn’t, reject it and it goes back.</p></li>
-    </ol>
+    <p class="lead">Everything happens on WhatsApp. No app to install, no account to create.</p>
+    {steps([
+        ("Send your licence disc", f"Send a photo of your licence disc to {WA_CLIENT_NUMBER_DISPLAY} on WhatsApp, then complete the short request form."),
+        ("Get one price", "We ask our suppliers and send you one total, including delivery. Your quote is valid for 48 hours."),
+        ("Agree delivery", "Accept the quote and agree a delivery date and time with us."),
+        ("The courier delivers", "A courier collects the part from the supplier and brings it to your door, anywhere in South Africa."),
+        ("Inspect, then pay", "Accept the part and pay through a secure PayFast link, or reject it and pay nothing."),
+    ], "steps-5")}
+    {benefits([
+        ("Pay only for what you accept", "You see the part before you pay. Reject it and it costs you nothing."),
+        ("One price, no surprises", "Your quote includes the part and delivery. There are no extra delivery charges."),
+        ("Your details stay private", "Suppliers see your vehicle and the part, never your name, number or address."),
+    ])}
   </div>
 </section>
 
-<section class="band">
-  <div class="wrap two">
-    <div class="fact"><h3>One price, delivery included</h3><p>The price you accept is the price you pay. Collection and delivery are part of it.</p></div>
-    <div class="fact"><h3>Pay after inspection</h3><p>You pay by EFT only after you’ve accepted the part. Use the request number on your invoice as the reference.</p></div>
-    <div class="fact"><h3>Everything on WhatsApp</h3><p>No app to install and no account to create. Every step happens in your WhatsApp chat with us.</p></div>
-  </div>
-</section>
-
-<section class="band raised">
+<section class="band band-tight">
   <div class="wrap">
-    <h2>Questions</h2>
-    <dl class="qa">
-      <dt>Which areas do you deliver to?</dt>
-      <dd>For now, {CITY} only. We’ll add more areas as we grow.</dd>
-      <dt>What if I don’t have my licence disc?</dt>
-      <dd>You can type your vehicle details instead. The VIN, engine and registration numbers help suppliers find the exact part.</dd>
-      <dt>Can I order more than one part?</dt>
-      <dd>Each request is for one part. Send a new request for every other part you need.</dd>
-      <dt>What if the part is wrong?</dt>
-      <dd>Reject it when you inspect it and tell us why. The part goes back to the supplier, and you don’t pay for it.</dd>
-    </dl>
-    <div class="actions"><a class="btn" href="{WA_API_LINK}">Request a part on WhatsApp</a></div>
-  </div>
-</section>
-"""
-
-SUPPLIERS = f"""
-<section class="hero">
-  <div class="wrap">
-    <div>
-      <h1>Sell more parts without chasing buyers.</h1>
-      <p class="lead">We send you requests from private clients in {CITY} who need parts you stock. You quote on WhatsApp, and our courier collects the parts you sell.</p>
-      <div class="actions"><a class="btn" href="{WA_BUSINESS_LINK}">Ask to join on WhatsApp</a></div>
-    </div>
-    <div class="disc" aria-hidden="true">
-      <div class="big">52</div>
-      <div class="name">Supplier network</div>
+    <div class="panel panel-surface">
+      <div>
+        <h2>Workshops and panel beaters</h2>
+        <p>Need parts regularly? Talk to us on WhatsApp about how 52 Car Parts can work for your business.</p>
+      </div>
+      {wa_button(WA_WORKSHOP, "Talk to us on WhatsApp")}
     </div>
   </div>
 </section>
 
-<section class="band raised">
-  <div class="wrap">
-    <h2>How quoting works</h2>
-    <ol class="steps">
-      <li><h3>You receive a request</h3><p>A WhatsApp message with the vehicle, the part and its position, from a client looking for a part you carry.</p></li>
-      <li><h3>You quote</h3><p>Tap to open the quote form and enter a price for each type you have: OEM, aftermarket, reconditioned or used.</p></li>
-      <li><h3>The client chooses</h3><p>We show the client the quotes. If yours is chosen, we let you know straight away.</p></li>
-      <li><h3>We collect</h3><p>Our courier confirms a collection time with you and collects the part from your premises.</p></li>
-    </ol>
+<section class="band" id="about">
+  <div class="wrap about">
+    <h2>About 52 Car Parts</h2>
+    <p>52 Car Parts is a brand of Vyf Twee (Pty) Ltd, a South African company that builds and runs digital ventures.</p>
+    <p><a class="text-link" href="{VYFTWEE}">About Vyf Twee</a></p>
   </div>
-</section>
+</section>"""
+
+SUPPLIERS_INTRO = ("Receive ready-made requests on WhatsApp for the makes and stock you carry. You set your "
+                   "price; we handle the client, the delivery and the payment.")
+
+SUPPLIERS = hero(
+    "For parts suppliers in Gauteng",
+    "Sell more parts,", "without the phone calls.",
+    SUPPLIERS_INTRO, "", h1_class="h1-suppliers",
+) + f"""
 
 <section class="band">
-  <div class="wrap two">
-    <div class="fact"><h3>Joining</h3><p>We onboard suppliers by phone: WhatsApp or call us on <a href="{WA_BUSINESS_LINK}">{WA_BUSINESS_NUMBER_DISPLAY}</a>. We’ll ask which makes and part types you carry, and confirm your business address and contact person.</p></div>
-    <div class="fact"><h3>Your own pace</h3><p>Quote on the requests that suit you. If you don’t have the part, ignore the request.</p></div>
-    <div class="fact"><h3>Stop any time</h3><p>Reply STOP to any of our messages and we won’t send you requests again.</p></div>
-  </div>
-</section>
-"""
-
-ABOUT = f"""
-<section class="doc">
   <div class="wrap">
-    <h1>About us</h1>
-    <p class="lead">52 Car Parts is a brand of Vyf Twee, a South African business. “Vyf twee” is Afrikaans for “five two”: 52.</p>
-    <p>We started 52 Car Parts because finding a car part still means phoning around, comparing prices that leave out delivery, and taking time off to collect. We bring that onto WhatsApp: you send one request, suppliers quote, and we deliver.</p>
-    <p>We’re starting small and local, with private clients in {CITY}, a network of trusted suppliers we onboard personally, and our own courier partner. We’ll grow from there.</p>
-    <h2>The business behind the brand</h2>
-    <div class="table-wrap"><table>
-      <tr><th>Brand</th><td>52 Car Parts (52carparts.co.za)</td></tr>
-      <tr><th>Business</th><td>{LEGAL_NAME} (<a href="https://vyftwee.co.za/">vyftwee.co.za</a>)</td></tr>
-      <tr><th>{LEGAL_NAME} registration number</th><td>{REG_NUMBER}</td></tr>
-      <tr><th>Address</th><td>{ADDRESS}</td></tr>
-      <tr><th>WhatsApp</th><td><a href="{WA_API_LINK}">{WA_API_NUMBER_DISPLAY}</a></td></tr>
-      <tr><th>Email</th><td><a href="mailto:{EMAIL}">{EMAIL}</a></td></tr>
-    </table></div>
+    <h2>How it works for suppliers</h2>
+    {steps([
+        ("Requests for your stock", "Each request shows the vehicle, VIN, part and part type, only for the makes and stock you carry."),
+        ("Quote in a short form", "Open the form in WhatsApp and send your price, including VAT if you charge it."),
+        ("Our courier collects", "If your quote wins, we collect the part. A part the client rejects comes back to you at our cost."),
+        ("Get paid by EFT", "Within 2 working days after the client’s payment reaches us, with a remittance advice for each request."),
+    ], "steps-4")}
+    {benefits([
+        ("Your price stays yours", "We add our margin on top of your quote. Nothing is deducted from what you charge."),
+        ("Nothing to install", "Everything runs on WhatsApp, on the phone you already use."),
+        ("Stop at any time", "Reply STOP to any request and you will receive no further messages."),
+    ])}
   </div>
 </section>
-"""
 
-PRIVACY = f"""
-<section class="doc">
+<section class="band band-tight band-last">
   <div class="wrap">
-    <h1>Privacy policy</h1>
-    <p class="meta">Last updated: {UPDATED}</p>
-    <p>This policy explains how Vyf Twee, trading as 52 Car Parts, collects and uses personal information, in line with the Protection of Personal Information Act, 2013 (POPIA). It applies to clients, suppliers and couriers who use our WhatsApp service, and to visitors of this website.</p>
-
-    <h2>Who is responsible</h2>
-    <p>{LEGAL_NAME} ({REG_NUMBER}), {ADDRESS}, is the responsible party. Our Information Officer is {OFFICER}, reachable at <a href="mailto:{EMAIL}">{EMAIL}</a>.</p>
-
-    <h2>What we collect</h2>
-    <h3>Clients</h3>
-    <ul>
-      <li>Your WhatsApp number, name and the messages you send us.</li>
-      <li>Your vehicle details: the photo of your licence disc and what we read from it (VIN, engine number, registration number, make, model and year).</li>
-      <li>The part you request and your choices on quotes, inspection and payment.</li>
-      <li>Your delivery address, or a location pin if you share one.</li>
-    </ul>
-    <h3>Suppliers and couriers</h3>
-    <ul>
-      <li>Business name, contact person, phone and WhatsApp numbers, business address and operating hours.</li>
-      <li>Your quotes, collection and delivery arrangements, and messages with us.</li>
-    </ul>
-    <h3>Website visitors</h3>
-    <p>This website uses no cookies, analytics or tracking, and loads nothing from other sites.</p>
-
-    <h2>Why we use it</h2>
-    <ul>
-      <li>To process your part request: finding suppliers, collecting quotes and arranging collection and delivery.</li>
-      <li>To invoice you and record payments.</li>
-      <li>To keep you informed about your request on WhatsApp.</li>
-      <li>To meet our legal obligations, such as keeping financial records.</li>
-    </ul>
-    <p>We use your information because it’s needed to provide the service you asked for, and where the law requires us to. We don’t sell it, and we don’t use it for advertising.</p>
-
-    <h2>Who we share it with</h2>
-    <div class="table-wrap"><table>
-      <tr><th>Who</th><th>What they receive</th><th>Why</th></tr>
-      <tr><td>Suppliers</td><td>Vehicle details and the part requested. Not your name, number or address.</td><td>To quote on your request</td></tr>
-      <tr><td>Our courier</td><td>The client’s name, number and delivery address; the supplier’s name, number and address</td><td>To collect and deliver the part</td></tr>
-      <tr><td>Meta (WhatsApp)</td><td>Our WhatsApp messages with you</td><td>WhatsApp is how the service works</td></tr>
-      <tr><td>Microsoft Azure</td><td>All the information above, stored and processed in South Africa</td><td>Hosting our system</td></tr>
-      <tr><td>Google (Maps)</td><td>Delivery and collection addresses</td><td>To check and locate addresses</td></tr>
-    </table></div>
-    <p>Meta and Google may process information outside South Africa, under their own privacy terms and safeguards.</p>
-
-    <h2>How long we keep it</h2>
-    <p>We keep request and invoice records for five years, as South African tax law requires. Other personal information is kept only while it’s needed for the service, and deleted or anonymised after that.</p>
-
-    <h2>How we protect it</h2>
-    <p>Access is limited to the people who run the service. Information is stored in secured cloud services, and credentials are kept in a protected key vault.</p>
-
-    <h2>Your rights</h2>
-    <ul>
-      <li>Ask what personal information we hold about you, and for a copy.</li>
-      <li>Ask us to correct or delete it.</li>
-      <li>Object to how we use it.</li>
-      <li>Stop our messages: reply STOP to any message.</li>
-    </ul>
-    <p>Send requests to <a href="mailto:{EMAIL}">{EMAIL}</a> or message us on WhatsApp. If you’re not satisfied with our response, you can complain to the Information Regulator at <a href="https://inforegulator.org.za/">inforegulator.org.za</a>.</p>
-
-    <h2>Changes to this policy</h2>
-    <p>If we change this policy, we’ll update the date at the top of this page.</p>
+    <div class="panel panel-dark on-dark">
+      <div>
+        <h2>Join our supplier network</h2>
+        <p>We onboard every supplier personally. Send us a WhatsApp message and we will call you to set you up.</p>
+      </div>
+      {wa_button(WA_SUPPLIER, f'Message us: <span class="nowrap">{WA_SUPPLIER_NUMBER_DISPLAY}</span>')}
+    </div>
   </div>
-</section>
-"""
+</section>"""
 
-for f, title, desc, body in [
-    ("index.html", "52 Car Parts | Car parts sourced and delivered on WhatsApp", "Send a photo of your licence disc on WhatsApp. Suppliers quote, you choose, we deliver, and you pay after inspection.", CLIENTS),
-    ("suppliers.html", "Suppliers | 52 Car Parts", "Receive part requests from private clients on WhatsApp, quote in a tap, and we collect the parts you sell.", SUPPLIERS),
-    ("about.html", "About us | 52 Car Parts", "52 Car Parts is a brand of Vyf Twee, sourcing car parts for private clients on WhatsApp.", ABOUT),
-    ("privacy.html", "Privacy policy | 52 Car Parts", "How Vyf Twee, trading as 52 Car Parts, collects and uses personal information under POPIA.", PRIVACY),
+NOT_FOUND = hero(
+    "Error 404",
+    "Page not found.", "Let’s get you back.",
+    "The page you were looking for isn’t here. Start again from the home page, or see how we work with suppliers.",
+    """<div class="actions"><a class="btn btn-primary" href="/">Go to the home page</a><a class="btn btn-secondary" href="/suppliers">Suppliers</a></div>""",
+    h1_class="h1-suppliers",
+)
+
+import os
+os.makedirs("site/suppliers", exist_ok=True)
+for out, path, title, desc, body, current, noindex in [
+    ("site/index.html", "/", "52 Car Parts | Car parts sourced in Gauteng, delivered nationwide", HOME_INTRO, HOME, None, False),
+    ("site/suppliers/index.html", "/suppliers", "Suppliers | 52 Car Parts", SUPPLIERS_INTRO, SUPPLIERS, "suppliers", False),
+    ("site/404.html", "/404.html", "Page not found | 52 Car Parts", "This page could not be found.", NOT_FOUND, None, True),
 ]:
-    open("site/" + f, "w", encoding="utf-8").write(page(f, title, desc, body))
-print("built", [p for p, _ in PAGES])
+    with open(out, "w", encoding="utf-8", newline="\n") as f:
+        f.write(page(path, title, desc, body, current, noindex))
+    print("built", out)

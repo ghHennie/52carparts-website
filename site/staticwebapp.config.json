@@ -1,0 +1,23 @@
+{
+  "trailingSlash": "never",
+  "routes": [
+    { "route": "/suppliers", "rewrite": "/suppliers/index.html" },
+    { "route": "/privacy.html", "redirect": "https://www.vyftwee.co.za/privacy", "statusCode": 301 },
+    { "route": "/privacy", "redirect": "https://www.vyftwee.co.za/privacy", "statusCode": 301 },
+    { "route": "/about.html", "redirect": "/#about", "statusCode": 301 },
+    { "route": "/about", "redirect": "/#about", "statusCode": 301 },
+    { "route": "/suppliers.html", "redirect": "/suppliers", "statusCode": 301 },
+    { "route": "/index.html", "redirect": "/", "statusCode": 301 }
+  ],
+  "responseOverrides": {
+    "404": { "rewrite": "/404.html", "statusCode": 404 }
+  },
+  "mimeTypes": {
+    ".webmanifest": "application/manifest+json"
+  },
+  "globalHeaders": {
+    "Content-Security-Policy": "default-src 'self'; base-uri 'self'; form-action 'none'; frame-ancestors 'none'",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin"
+  }
+}
