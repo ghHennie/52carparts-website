@@ -11,8 +11,39 @@ ADDRESS     = "565 Coert Steynberg Street, Constantia Park, Pretoria, 0010"
 
 SITE    = "https://www.52carparts.co.za"
 VYFTWEE = "https://www.vyftwee.co.za"
-WA_CLIENT   = f"https://wa.me/{WA_CLIENT_NUMBER}"
-WA_SUPPLIER = f"https://wa.me/{WA_SUPPLIER_NUMBER}"
+
+# Pre-filled WhatsApp messages. The client text goes to the bot; the workshop and
+# supplier texts go to the business number, where a person replies.
+CLIENT_TEXT   = "Hi, I'd like to get a quote."
+WORKSHOP_TEXT = "Hi, I'm from a workshop or panel beater and would like to talk about sourcing parts regularly."
+SUPPLIER_TEXT = "Hi, I'm a parts supplier in Gauteng and would like to join the 52 Car Parts network."
+
+# TEMPORARY: the WhatsApp bot currently routes any message containing one of these
+# substrings (case-insensitive, even inside a word) down a different path, so the
+# client text must not contain any of them. Remove this check once the WhatsApp
+# platform routes clients by customer type instead of keywords.
+BOT_KEYWORDS = ["part", "parts", "bumper", "panel", "light", "mirror", "engine", "gearbox", "door",
+                "bonnet", "boot", "vin", "exhaust", "radiator", "strut", "shock", "alternator",
+                "headlight", "taillight", "grille", "fender", "mudguard", "starter", "battery",
+                "clutch", "brake", "caliper"]
+_hits = [k for k in BOT_KEYWORDS if k in CLIENT_TEXT.lower()]
+if _hits:
+    raise SystemExit(f"build failed: CLIENT_TEXT contains bot routing keyword(s) {_hits}: {CLIENT_TEXT!r}")
+
+from urllib.parse import quote
+def wa(number, text):
+    return f"https://wa.me/{number}?text={quote(text, safe='')}"
+
+# Meta's official WhatsApp glyph, copied unchanged from the brand folder. It is
+# referenced as a file, not inlined, so its colours and markup stay exactly as supplied.
+WA_GLYPH = '<img class="wa-icon" src="/images/whatsapp-glyph.svg" alt="" aria-hidden="true" width="20" height="20">'
+
+def wa_button(href, label, cls=""):
+    return f'<a class="btn btn-primary btn-wa{" " + cls if cls else ""}" href="{href}">{WA_GLYPH}<span>{label}</span></a>'
+
+WA_CLIENT   = wa(WA_CLIENT_NUMBER, CLIENT_TEXT)
+WA_WORKSHOP = wa(WA_SUPPLIER_NUMBER, WORKSHOP_TEXT)
+WA_SUPPLIER = wa(WA_SUPPLIER_NUMBER, SUPPLIER_TEXT)
 POLICIES = [("Terms", "terms"), ("Privacy", "privacy"), ("Refunds", "refunds"),
             ("Cancellations", "cancellations"), ("Delivery", "delivery")]
 
@@ -31,7 +62,7 @@ def header(current):
     <nav class="site-nav" aria-label="Main">
       <ul>{link("/#how", "How it works", "how")}{link("/suppliers", "Suppliers", "suppliers")}{link("/#about", "About", "about")}</ul>
     </nav>
-    <a class="btn btn-primary header-cta" href="{WA_CLIENT}"><span class="long">Start on&nbsp;</span>WhatsApp</a>
+    {wa_button(WA_CLIENT, '<span class="long">Start on </span>WhatsApp', "header-cta")}
   </div>
 </header>"""
 
@@ -126,7 +157,8 @@ HOME = hero(
     "Sourced in Gauteng · Delivered nationwide",
     "You need the part.", "We’ll find it.",
     HOME_INTRO,
-    f"""<div class="actions"><a class="btn btn-primary" href="{WA_CLIENT}">Start on WhatsApp</a><a class="btn btn-secondary" href="#how">How it works</a></div>""",
+    f"""<div class="actions">{wa_button(WA_CLIENT, "Start on WhatsApp")}<a class="btn btn-secondary" href="#how">How it works</a></div>
+      <p class="hero-note">WhatsApp opens with a message ready. Tap Send and we’ll reply with the next steps.</p>""",
     id_attr=' id="top"',
 ) + f"""
 
@@ -156,7 +188,7 @@ HOME = hero(
         <h2>Workshops and panel beaters</h2>
         <p>Need parts regularly? Talk to us on WhatsApp about how 52 Car Parts can work for your business.</p>
       </div>
-      <a class="btn btn-primary" href="{WA_CLIENT}">Talk to us on WhatsApp</a>
+      {wa_button(WA_WORKSHOP, "Talk to us on WhatsApp")}
     </div>
   </div>
 </section>
@@ -202,7 +234,7 @@ SUPPLIERS = hero(
         <h2>Join our supplier network</h2>
         <p>We onboard every supplier personally. Send us a WhatsApp message and we will call you to set you up.</p>
       </div>
-      <a class="btn btn-primary" href="{WA_SUPPLIER}">Message us: {WA_SUPPLIER_NUMBER_DISPLAY}</a>
+      {wa_button(WA_SUPPLIER, f'Message us: <span class="nowrap">{WA_SUPPLIER_NUMBER_DISPLAY}</span>')}
     </div>
   </div>
 </section>"""

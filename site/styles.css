@@ -71,7 +71,11 @@ p { margin: 0 0 1em; }
 .btn-primary:hover { background: #FF7D22; border-color: #FF7D22; color: var(--carbon); }
 .btn-secondary { background: transparent; color: var(--on-dark); border: 1.5px solid var(--secondary-border); }
 .btn-secondary:hover { border-color: var(--on-dark); color: var(--on-dark); }
+.btn-wa { gap: 8px; }
+.wa-icon { width: 20px; height: 20px; flex-shrink: 0; }
+.nowrap { white-space: nowrap; }
 .actions { display: flex; flex-wrap: wrap; gap: 12px 14px; margin-top: 28px; }
+.hero-note { color: var(--on-dark-small); font-size: 14px; margin: 14px 0 0; }
 
 /* ── Header ───────────────────────────────────────────── */
 .site-header { background: var(--bg); border-bottom: 1px solid var(--line); }
