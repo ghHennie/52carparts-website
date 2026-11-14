@@ -2,7 +2,6 @@
   "trailingSlash": "never",
   "routes": [
     { "route": "/suppliers", "rewrite": "/suppliers/index.html" },
-    { "route": "/suppliers/", "redirect": "/suppliers", "statusCode": 301 },
     { "route": "/privacy.html", "redirect": "https://www.vyftwee.co.za/privacy", "statusCode": 301 },
     { "route": "/privacy", "redirect": "https://www.vyftwee.co.za/privacy", "statusCode": 301 },
     { "route": "/about.html", "redirect": "/#about", "statusCode": 301 },
