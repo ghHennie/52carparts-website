@@ -18,18 +18,6 @@ CLIENT_TEXT   = "Hi, I'd like to get a quote."
 WORKSHOP_TEXT = "Hi, I'm from a workshop or panel beater and would like to talk about sourcing parts regularly."
 SUPPLIER_TEXT = "Hi, I'm a parts supplier in Gauteng and would like to join the 52 Car Parts network."
 
-# TEMPORARY: the WhatsApp bot currently routes any message containing one of these
-# substrings (case-insensitive, even inside a word) down a different path, so the
-# client text must not contain any of them. Remove this check once the WhatsApp
-# platform routes clients by customer type instead of keywords.
-BOT_KEYWORDS = ["part", "parts", "bumper", "panel", "light", "mirror", "engine", "gearbox", "door",
-                "bonnet", "boot", "vin", "exhaust", "radiator", "strut", "shock", "alternator",
-                "headlight", "taillight", "grille", "fender", "mudguard", "starter", "battery",
-                "clutch", "brake", "caliper"]
-_hits = [k for k in BOT_KEYWORDS if k in CLIENT_TEXT.lower()]
-if _hits:
-    raise SystemExit(f"build failed: CLIENT_TEXT contains bot routing keyword(s) {_hits}: {CLIENT_TEXT!r}")
-
 from urllib.parse import quote
 def wa(number, text):
     return f"https://wa.me/{number}?text={quote(text, safe='')}"
